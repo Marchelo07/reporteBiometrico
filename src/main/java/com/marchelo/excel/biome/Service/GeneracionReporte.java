@@ -18,38 +18,45 @@ import java.util.List;
 
 public class GeneracionReporte {
     public void setInformationReport(List<UserBiometrico> listOntime, List<UserBiometrico> listUserOnLate,
-                                     List<UserBiometrico> listAllRegister,
-                                     List<UserBiometrico> listLaunchTime) throws IOException, ParseException {
-        generarArchivoExcelResult(listOntime, listUserOnLate, listAllRegister, listLaunchTime);
+                                     List<UserBiometrico> listAllRegister, List<UserBiometrico> listRegisterFinDe,
+                                     List<UserBiometrico> listLaunchTime, String nameSheet) throws IOException, ParseException {
+        generarArchivoExcelResult(listOntime, listUserOnLate, listAllRegister, listRegisterFinDe, listLaunchTime, nameSheet);
     }
 
     private void generarArchivoExcelResult(List<UserBiometrico> listOntime, List<UserBiometrico>listUserOnLate,
-                                           List<UserBiometrico> listAllRegister,
-                                           List<UserBiometrico> listLaunchTime) throws IOException, ParseException {
+                                           List<UserBiometrico> listAllRegister, List<UserBiometrico> listRegisterFinDe,
+                                           List<UserBiometrico> listLaunchTime, String nameSheet) throws IOException, ParseException {
         Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("ONTIME");
-        generarSheetUserOnTime(workbook, sheet, listOntime);
-        sheet = workbook.createSheet("LATE");
+        Sheet sheet = workbook.createSheet("ATRASOS");
         generarSheetUserLate(workbook, sheet, listUserOnLate);
-        sheet = workbook.createSheet("TIMBRADAS");
+        sheet = workbook.createSheet("FIN DE SEMANA");
+        generarSheetUserFinDe(workbook, sheet, listRegisterFinDe);
+        sheet = workbook.createSheet("ONTIME");
+        generarSheetUserOnTime(workbook, sheet, listOntime);
+        sheet = workbook.createSheet("4 TIMBRADAS");
         generarSheetUserAllRegister(workbook, sheet, listAllRegister);
         sheet = workbook.createSheet("ALMUERZO");
         generarSheetUsersLaunchTime(workbook, sheet, listLaunchTime);
 
-        String fechaFile = UtilDate.sformatFile.format(new Date());
+        String fechaFileExcel = UtilDate.sformatFile.format(new Date());
+        String fechaDirectorio = UtilDate.sformatFechaDDMMYYY.format(new Date());
+        String nameFile = "RptBiometrico_" + nameSheet + "_"+ fechaFileExcel +".xlsx";
         File currDir = new File(".");
         String path = currDir.getAbsolutePath();
-        System.out.println("path");
-        System.out.println(path);
-        String fileLocation = path.substring(0, path.length() - 1) + "RptBiometrico"+ fechaFile +".xlsx";
-        System.out.println("fileLocation");
-        System.out.println(fileLocation);
-
-        FileOutputStream outputStream = new FileOutputStream(fileLocation);
+        String tempfileLocation = path.substring(0, path.length() - 1);
+        String directorioSave = tempfileLocation+"Rept_"+fechaDirectorio;
+        crearDirectorioReporte(directorioSave);
+        FileOutputStream outputStream = new FileOutputStream(directorioSave+"/"+nameFile);
         workbook.write(outputStream);
         workbook.close();
     }
 
+    private void crearDirectorioReporte(String directoryName){
+        File directory = new File(directoryName);
+        if (! directory.exists()){
+            directory.mkdir();
+        }
+    }
     private void generarSheetUsersLaunchTime(Workbook workbook, Sheet sheet, List<UserBiometrico> listLaunchTime) throws ParseException {
         String[] headerReportLaunch ={"ID","NOMBRE","FECHA","BREAK OUT","BREAK IN","TIME"};
         sheet.setColumnWidth(0, 2000);
@@ -191,6 +198,69 @@ public class GeneracionReporte {
             cell.setCellValue("No existen registros para mostrar");
         }
     }
+    private void generarSheetUserFinDe(Workbook workbook, Sheet sheet, List<UserBiometrico> listRegisterFinDe){
+        String[] headerOnFinDe ={"ID","NOMBRE","FECHA","INGRESO", "SALIDA"};
+        sheet.setColumnWidth(0, 2000);
+        sheet.setColumnWidth(1, 6000);
+        sheet.setColumnWidth(2, 4000);
+        sheet.setColumnWidth(3, 4000);
+        Row header = sheet.createRow(0);
+
+        CellStyle style = EstilosExcel.crearStiloCabecera(workbook);
+
+        Cell headerCell = header.createCell(0);
+        headerCell.setCellValue("ID");
+        headerCell.setCellStyle(style);
+        headerCell = header.createCell(1);
+        headerCell.setCellValue("NOMBRE");
+        headerCell.setCellStyle(style);
+
+        if(listRegisterFinDe.size() > 0){
+            Integer rowNext = 1;
+            for(int i=0; i < listRegisterFinDe.size(); i++){
+                UserBiometrico user = listRegisterFinDe.get(i);
+                Row row = sheet.createRow(rowNext);
+                Cell cell = row.createCell(0);
+                cell.setCellValue(user.getPersonID());
+
+                cell = row.createCell(1);
+                cell.setCellValue(user.getName());
+                rowNext = rowNext + 1;
+            }
+            //TABLE 2
+            rowNext = rowNext + 1;
+            header = sheet.createRow(rowNext);
+            //HEADER
+            for(int i=0; i< headerOnFinDe.length; i++){
+                headerCell = header.createCell(i);
+                headerCell.setCellValue(headerOnFinDe[i]);
+                headerCell.setCellStyle(style);
+            }
+            //BODY
+            List<DtoDetailUserOnTime> lista = getInfoDetailUserFinDe(listRegisterFinDe);
+            rowNext = rowNext + 1;
+            for(int i=0; i < lista.size(); i++){
+                DtoDetailUserOnTime user = lista.get(i);
+                Row row = sheet.createRow(rowNext);
+                Cell cell = row.createCell(0);
+                cell.setCellValue(user.getId());
+                cell = row.createCell(1);
+                cell.setCellValue(user.getNombre());
+                cell = row.createCell(2);
+                cell.setCellValue(user.getFecha());
+                cell = row.createCell(3);
+                cell.setCellValue(user.getHoraIngreso());
+                cell = row.createCell(4);
+                cell.setCellValue(user.getHoraSalida());
+                rowNext = rowNext + 1;
+            }
+        }else{
+            Row row = sheet.createRow(1);
+            Cell cell = row.createCell(1);
+            cell.setCellValue("No existen registros para mostrar");
+        }
+
+    }
     private void generarSheetUserOnTime (Workbook workbook, Sheet sheet, List<UserBiometrico> listOntime){
         String[] headerOnTimeUser ={"ID","NOMBRE","FECHA","INGRESO"};
 
@@ -268,6 +338,9 @@ public class GeneracionReporte {
         headerCell = header.createCell(1);
         headerCell.setCellValue("NOMBRE");
         headerCell.setCellStyle(style);
+        headerCell = header.createCell(2);
+        headerCell.setCellValue("# ATRASOS");
+        headerCell.setCellStyle(style);
 
         if(listUserOnLate.size()>0){
             Integer rowNext = 1;
@@ -276,9 +349,10 @@ public class GeneracionReporte {
                 Row row = sheet.createRow(rowNext);
                 Cell cell = row.createCell(0);
                 cell.setCellValue(user.getPersonID());
-
                 cell = row.createCell(1);
                 cell.setCellValue(user.getName());
+                cell = row.createCell(2);
+                cell.setCellValue(user.getDate().size());
                 rowNext = rowNext + 1;
             }
             //TABLE 2
@@ -335,6 +409,27 @@ public class GeneracionReporte {
             List<DtoHorario> listHorarios = it.getDate();
             for(DtoHorario h : listHorarios){
                 result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), h.getTime().get(0)));
+            }
+        }
+        return result;
+    }
+    private List<DtoDetailUserOnTime> getInfoDetailUserFinDe(List<UserBiometrico> listUserFinDe){
+        List<DtoDetailUserOnTime> result = new ArrayList<>();
+        for(UserBiometrico it : listUserFinDe){
+            List<DtoHorario> listHorarios = it.getDate();
+            for(DtoHorario h : listHorarios){
+                if(h.getTime().size() == 0){
+                    result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), "-", "-"));
+                }else if(h.getTime().size() == 1){
+                    result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), h.getTime().get(0), "-"));
+                } else if (h.getTime().size() == 2) {
+                    result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), h.getTime().get(0), h.getTime().get(1)));
+                }else{
+                    Integer positionFinal = h.getTime().size() - 1;
+                    String horaInicio = h.getTime().get(0);
+                    String horaFin = h.getTime().get(positionFinal);
+                    result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), horaInicio, horaFin));
+                }
             }
         }
         return result;

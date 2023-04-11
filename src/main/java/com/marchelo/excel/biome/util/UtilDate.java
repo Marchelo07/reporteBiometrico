@@ -13,7 +13,7 @@ public class UtilDate {
     DateFormat outsfd = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
     public static DateFormat dateFormatHHMM = new SimpleDateFormat("HH:mm");
     public static SimpleDateFormat sformatFile = new SimpleDateFormat("MM-dd-yyyy_HH_mm_ss");
-    SimpleDateFormat sformatFechaDDMMYYY = new SimpleDateFormat("dd-MM-yyyy");
+    public static SimpleDateFormat sformatFechaDDMMYYY = new SimpleDateFormat("dd-MM-yyyy");
 
 
 

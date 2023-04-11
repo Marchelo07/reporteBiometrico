@@ -1,14 +1,11 @@
 package com.marchelo.excel.biome.Service;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.marchelo.excel.biome.Models.DtoDetailUserOnTime;
 import com.marchelo.excel.biome.Models.DtoHorario;
 import com.marchelo.excel.biome.Models.UserBiometrico;
 import com.marchelo.excel.biome.util.UtilString;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -16,12 +13,11 @@ import java.io.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalTime;
 import java.util.*;
 
 public class LecturaBiometrico {
 
-    private static String[] cabecera ={"Person ID","Name","Department","Time","Attendance Status"};
+    private static String[] cabecera ={"Person ID","Name","Time","Department","Attendance Status"};
     private static Integer numColums = cabecera.length;
     DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss aa");
     DateFormat outsfd = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
@@ -30,7 +26,7 @@ public class LecturaBiometrico {
     SimpleDateFormat sformatFechaDDMMYYY = new SimpleDateFormat("dd-MM-yyyy");
 
     public void lecturaArchivo() throws IOException, ParseException {
-        System.out.println("Leyendo archivs...");
+        System.out.println("Leyendo archivos...");
         buscarArchivoExcel();
     }
 
@@ -40,57 +36,77 @@ public class LecturaBiometrico {
             File currDir = new File(".");
             String path = currDir.getAbsolutePath();
             String fileLocation = path.substring(0, path.length() - 1) + "Biometrico.xlsx";
-            //String rutaFile = "C:/biometrico/pruebasExcel.xlsx";
             FileInputStream inputStream = new FileInputStream(new File(fileLocation));
             Workbook workbook = new XSSFWorkbook(inputStream);
-            Sheet datos = workbook.getSheetAt(0);
-
-            List<String> lineRow = null;
-            System.out.println(datos.getPhysicalNumberOfRows());
-            List<UserBiometrico> listInfoBiome = new ArrayList<>();
-            for(int i = 1; i < datos.getPhysicalNumberOfRows(); i++){
-                XSSFRow row = (XSSFRow) datos.getRow(i);
-                lineRow = new ArrayList<String>();
-                JsonObject obj = new JsonObject();
-                UserBiometrico dto = new UserBiometrico();
-                for(int j=0; j< row.getPhysicalNumberOfCells(); j++){
-                    if(j <= (numColums - 1) ){
-                        if(j == 3){
-                            DataFormatter formatter = new DataFormatter();
-                            String strfecha = formatter.formatCellValue(row.getCell(j));
-                            String fecha = getFechaFormat(new Date(strfecha));
-                            lineRow.add(fecha);
-                        }else {
-                            lineRow.add(row.getCell(j).toString());
-                        }
-                    }
-                }
-                dto = verificacionRow(lineRow);
-                if(listInfoBiome.size() == 0){
-                    listInfoBiome.add(dto);
-                }else{
-                    listInfoBiome = organizarArrayInformacion(listInfoBiome, dto);
-                }
+            String nameSheet = "";
+            Integer numsSheets = workbook.getNumberOfSheets();
+            for(int i=0; i < numsSheets; i++){
+                nameSheet = workbook.getSheetName(i);
+                Sheet datos = workbook.getSheetAt(i);
+                recorrerSheet(datos, nameSheet);
             }
-            listInfoBiome.stream().forEach(i->{
-                i.setName(UtilString.capitalize(i.getName()));
-            });
-            generacionReportes(listInfoBiome);
+
         }catch (Exception e){
             e.printStackTrace();
         }
     }
-    private void generacionReportes(List<UserBiometrico> infoUsersBiome) throws ParseException, IOException {
+
+    private void recorrerSheet(Sheet datos, String nameSheet) throws ParseException, IOException {
+
+        List<String> lineRow = null;
+        System.out.println(datos.getPhysicalNumberOfRows());
+        List<UserBiometrico> listInfoBiome = new ArrayList<>();
+        for(int i = 1; i < datos.getPhysicalNumberOfRows(); i++){
+            XSSFRow row = (XSSFRow) datos.getRow(i);
+            lineRow = new ArrayList<String>();
+            JsonObject obj = new JsonObject();
+            UserBiometrico dto = new UserBiometrico();
+            for(int j=0; j< row.getPhysicalNumberOfCells(); j++){
+                if(j <= (numColums - 1) ){
+                    if(j == 2){
+                        DataFormatter formatter = new DataFormatter();
+                        String strfecha = formatter.formatCellValue(row.getCell(j));
+                        String fecha = getFechaFormat(new Date(strfecha));
+                        lineRow.add(fecha);
+                    }else {
+                        lineRow.add(row.getCell(j).toString());
+                    }
+                }
+            }
+            dto = verificacionRow(lineRow);
+            if(listInfoBiome.size() == 0){
+                listInfoBiome.add(dto);
+            }else{
+                listInfoBiome = organizarArrayInformacion(listInfoBiome, dto);
+            }
+        }
+        listInfoBiome.stream().forEach(i->{
+            i.setName(UtilString.capitalize(i.getName()));
+        });
+        Collections.sort(listInfoBiome, new Comparator<UserBiometrico>() {
+            @Override
+            public int compare(UserBiometrico o1, UserBiometrico o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+        Gson gson = new Gson();
+        System.out.println("DATA INFO");
+        System.out.println(gson.toJson(listInfoBiome));
+        System.out.println("DATA INFO");
+        generacionReportes(listInfoBiome, nameSheet);
+    }
+
+    private void generacionReportes(List<UserBiometrico> infoUsersBiome, String nameSheet) throws ParseException, IOException {
         Gson gson = new Gson();
         List<UserBiometrico> listUserOnTime = ProcesarInformacion.usersOnTime(infoUsersBiome);
         List<UserBiometrico> listUserOnLate = ProcesarInformacion.usersOnLate(infoUsersBiome);
         List<UserBiometrico> listRegisterAll = ProcesarInformacion.userCompleteRegister(listUserOnTime);
+        List<UserBiometrico> listRegisterFinDe = ProcesarInformacion.userRegisterFinDe(infoUsersBiome);
         List<UserBiometrico> listLauchAtime =  ProcesarInformacion.userLaunchATime(listRegisterAll);
 
         GeneracionReporte reporte = new GeneracionReporte();
-        reporte.setInformationReport(listUserOnTime, listUserOnLate, listRegisterAll, listLauchAtime);
+        reporte.setInformationReport(listUserOnTime, listUserOnLate, listRegisterAll, listRegisterFinDe, listLauchAtime, nameSheet);
     }
-
     private List<UserBiometrico> organizarArrayInformacion(List<UserBiometrico> list, UserBiometrico dto){
         List<UserBiometrico> listNewBiome = new ArrayList<>();
         String newDate = dto.getDate().get(0).getFecha();
@@ -105,7 +121,7 @@ public class LecturaBiometrico {
                         u.getDate().stream().filter(i-> dto.getDate().get(0).getFecha().equals(i.getFecha()))
                             .forEach( d -> {
                                 List<String> tiempos = d.getTime();
-                                if(!Arrays.asList(tiempos).contains(newTime)){
+                                if(!tiempos.contains(newTime)){
                                     tiempos.add(newTime);
                                 }
                                 Collections.sort(tiempos);
@@ -161,7 +177,7 @@ public class LecturaBiometrico {
         UserBiometrico dto = new UserBiometrico();
         dto.setPersonID(lineRow.get(0));
         dto.setName(lineRow.get(1));
-        List<DtoHorario> dtoHorario = getDtoHorario(lineRow.get(3));
+        List<DtoHorario> dtoHorario = getDtoHorario(lineRow.get(2));
         dto.setDate(dtoHorario);
         return dto;
     }

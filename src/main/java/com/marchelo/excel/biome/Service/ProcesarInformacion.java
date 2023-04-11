@@ -70,6 +70,22 @@ public class ProcesarInformacion {
         return result;
     }
 
+    public static List<UserBiometrico> userRegisterFinDe(List<UserBiometrico> infoUsersBiome) throws ParseException {
+        List<UserBiometrico> result = new ArrayList<>();
+        for(UserBiometrico it : infoUsersBiome){
+            List<DtoHorario> listFinde = new ArrayList<>();
+            for (DtoHorario h : it.getDate()){
+                if( isFinDeSemana(h.getFecha())){
+                    listFinde.add(h);
+                }
+            }
+            if(listFinde.size() > 0){
+                result.add(new UserBiometrico(it.getPersonID(), it.getName(), listFinde));
+            }
+        }
+        return result;
+    }
+
     public static List<UserBiometrico> userLaunchATime(List<UserBiometrico> infoUsersBiome) throws ParseException {
         List<UserBiometrico> result = new ArrayList<>();
         boolean userLaunch = true;
