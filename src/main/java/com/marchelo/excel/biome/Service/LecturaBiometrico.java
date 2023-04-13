@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.marchelo.excel.biome.Models.DtoHorario;
 import com.marchelo.excel.biome.Models.UserBiometrico;
+import com.marchelo.excel.biome.util.Error;
 import com.marchelo.excel.biome.util.UtilString;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -32,11 +33,13 @@ public class LecturaBiometrico {
 
     public void buscarArchivoExcel() throws IOException {
 
+        File currDir = new File(".");
+        String path = currDir.getAbsolutePath();
+        String fileLocation = path.substring(0, path.length() - 1);
+
         try{
-            File currDir = new File(".");
-            String path = currDir.getAbsolutePath();
-            String fileLocation = path.substring(0, path.length() - 1) + "Biometrico.xlsx";
-            FileInputStream inputStream = new FileInputStream(new File(fileLocation));
+            String rutaFile =  fileLocation + "Biometrico.xlsx";
+            FileInputStream inputStream = new FileInputStream(new File(rutaFile));
             Workbook workbook = new XSSFWorkbook(inputStream);
             String nameSheet = "";
             Integer numsSheets = workbook.getNumberOfSheets();
@@ -47,53 +50,60 @@ public class LecturaBiometrico {
             }
 
         }catch (Exception e){
+            System.out.println("ERROR: No se puede encontrar el archivo Biometrico.xlsx");
+            String error = "ERROR: No se puede encontrar el archivo Biometrico.xlsx";
+            Error.escribirLog(fileLocation,error);
             e.printStackTrace();
         }
     }
 
     private void recorrerSheet(Sheet datos, String nameSheet) throws ParseException, IOException {
-
-        List<String> lineRow = null;
-        System.out.println(datos.getPhysicalNumberOfRows());
-        List<UserBiometrico> listInfoBiome = new ArrayList<>();
-        for(int i = 1; i < datos.getPhysicalNumberOfRows(); i++){
-            XSSFRow row = (XSSFRow) datos.getRow(i);
-            lineRow = new ArrayList<String>();
-            JsonObject obj = new JsonObject();
-            UserBiometrico dto = new UserBiometrico();
-            for(int j=0; j< row.getPhysicalNumberOfCells(); j++){
-                if(j <= (numColums - 1) ){
-                    if(j == 2){
-                        DataFormatter formatter = new DataFormatter();
-                        String strfecha = formatter.formatCellValue(row.getCell(j));
-                        String fecha = getFechaFormat(new Date(strfecha));
-                        lineRow.add(fecha);
-                    }else {
-                        lineRow.add(row.getCell(j).toString());
+        try{
+            List<String> lineRow = null;
+            System.out.println(datos.getPhysicalNumberOfRows());
+            List<UserBiometrico> listInfoBiome = new ArrayList<>();
+            for(int i = 1; i < datos.getPhysicalNumberOfRows(); i++){
+                XSSFRow row = (XSSFRow) datos.getRow(i);
+                lineRow = new ArrayList<String>();
+                JsonObject obj = new JsonObject();
+                UserBiometrico dto = new UserBiometrico();
+                for(int j=0; j< row.getPhysicalNumberOfCells(); j++){
+                    if(j <= (numColums - 1) ){
+                        if(j == 2){
+                            DataFormatter formatter = new DataFormatter();
+                            String strfecha = formatter.formatCellValue(row.getCell(j));
+                            String fecha = getFechaFormat(new Date(strfecha));
+                            lineRow.add(fecha);
+                        }else {
+                            lineRow.add(row.getCell(j).toString());
+                        }
                     }
                 }
+                dto = verificacionRow(lineRow);
+                if(listInfoBiome.size() == 0){
+                    listInfoBiome.add(dto);
+                }else{
+                    listInfoBiome = organizarArrayInformacion(listInfoBiome, dto);
+                }
             }
-            dto = verificacionRow(lineRow);
-            if(listInfoBiome.size() == 0){
-                listInfoBiome.add(dto);
-            }else{
-                listInfoBiome = organizarArrayInformacion(listInfoBiome, dto);
-            }
+            listInfoBiome.stream().forEach(i->{
+                i.setName(UtilString.capitalize(i.getName()));
+            });
+            Collections.sort(listInfoBiome, new Comparator<UserBiometrico>() {
+                @Override
+                public int compare(UserBiometrico o1, UserBiometrico o2) {
+                    return o1.getName().compareTo(o2.getName());
+                }
+            });
+            Gson gson = new Gson();
+            generacionReportes(listInfoBiome, nameSheet);
+        }catch (Exception e){
+            File currDir = new File(".");
+            String path = currDir.getAbsolutePath();
+            String fileLocation = path.substring(0, path.length() - 1);
+            String error = "ERROR: Al leer archivo de excel ("+ nameSheet +")";
+            Error.escribirLog(fileLocation,error);
         }
-        listInfoBiome.stream().forEach(i->{
-            i.setName(UtilString.capitalize(i.getName()));
-        });
-        Collections.sort(listInfoBiome, new Comparator<UserBiometrico>() {
-            @Override
-            public int compare(UserBiometrico o1, UserBiometrico o2) {
-                return o1.getName().compareTo(o2.getName());
-            }
-        });
-        Gson gson = new Gson();
-        System.out.println("DATA INFO");
-        System.out.println(gson.toJson(listInfoBiome));
-        System.out.println("DATA INFO");
-        generacionReportes(listInfoBiome, nameSheet);
     }
 
     private void generacionReportes(List<UserBiometrico> infoUsersBiome, String nameSheet) throws ParseException, IOException {
@@ -103,9 +113,11 @@ public class LecturaBiometrico {
         List<UserBiometrico> listRegisterAll = ProcesarInformacion.userCompleteRegister(listUserOnTime);
         List<UserBiometrico> listRegisterFinDe = ProcesarInformacion.userRegisterFinDe(infoUsersBiome);
         List<UserBiometrico> listLauchAtime =  ProcesarInformacion.userLaunchATime(listRegisterAll);
+        List<UserBiometrico> listNoTimbra4Veces = ProcesarInformacion.userNoTimbra4Veces(infoUsersBiome);
 
         GeneracionReporte reporte = new GeneracionReporte();
-        reporte.setInformationReport(listUserOnTime, listUserOnLate, listRegisterAll, listRegisterFinDe, listLauchAtime, nameSheet);
+        reporte.setInformationReport(listUserOnTime, listUserOnLate, listRegisterAll, listRegisterFinDe, listLauchAtime,
+                listNoTimbra4Veces, nameSheet);
     }
     private List<UserBiometrico> organizarArrayInformacion(List<UserBiometrico> list, UserBiometrico dto){
         List<UserBiometrico> listNewBiome = new ArrayList<>();

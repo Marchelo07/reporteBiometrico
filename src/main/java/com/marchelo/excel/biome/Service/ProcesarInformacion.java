@@ -34,7 +34,6 @@ public class ProcesarInformacion {
         }
         return listaUsers;
     }
-
     public static List<UserBiometrico> usersOnLate (List<UserBiometrico> infoUsersBiome){
         List<UserBiometrico> listaUsers = new ArrayList<>();
         List<DtoHorario> listHorarioInpuntal = null;
@@ -51,7 +50,6 @@ public class ProcesarInformacion {
         }
         return listaUsers;
     }
-
     public static List<UserBiometrico> userCompleteRegister(List<UserBiometrico> infoUsersBiome) throws ParseException {
         List<UserBiometrico> result = new ArrayList<>();
         boolean userRegisterAll = true;
@@ -69,7 +67,6 @@ public class ProcesarInformacion {
         }
         return result;
     }
-
     public static List<UserBiometrico> userRegisterFinDe(List<UserBiometrico> infoUsersBiome) throws ParseException {
         List<UserBiometrico> result = new ArrayList<>();
         for(UserBiometrico it : infoUsersBiome){
@@ -85,7 +82,6 @@ public class ProcesarInformacion {
         }
         return result;
     }
-
     public static List<UserBiometrico> userLaunchATime(List<UserBiometrico> infoUsersBiome) throws ParseException {
         List<UserBiometrico> result = new ArrayList<>();
         boolean userLaunch = true;
@@ -103,6 +99,21 @@ public class ProcesarInformacion {
         }
         return result;
     }
+    public static List<UserBiometrico> userNoTimbra4Veces(List<UserBiometrico> infoUsersBiome) throws ParseException{
+        List<UserBiometrico> result = new ArrayList<>();
+        for(UserBiometrico it : infoUsersBiome){
+            List<DtoHorario> horarios = new ArrayList<>();
+            for (DtoHorario h : it.getDate()){
+                if(h.getTime().size() <=3 && !isFinDeSemana(h.getFecha())){
+                    horarios.add(h);
+                }
+            }
+            if(horarios.size()>0){
+                result.add(new UserBiometrico(it.getPersonID(), it.getName(), horarios));
+            }
+        }
+        return result;
+    }
 
     private static boolean validHorarioAlmuerzo (DtoHorario horario) throws ParseException {
         boolean llegaHoraSucess = true;
@@ -116,7 +127,6 @@ public class ProcesarInformacion {
         }
         return llegaHoraSucess;
     }
-
     private static Double calcularTiempoTrancurrido (String horaInicio, String horaFin) throws ParseException {
         Date dateInicio = dateFormatHHMM.parse(horaInicio);
         Date dateFin = dateFormatHHMM.parse(horaFin);
@@ -132,7 +142,6 @@ public class ProcesarInformacion {
         }
         return tiempotranscurrido;
     }
-
     private static boolean isFinDeSemana(String fecha) throws ParseException {
         boolean isFinDe = false;
         Date dateFecha = sformatFechaDDMMYYY.parse(fecha);
@@ -144,7 +153,6 @@ public class ProcesarInformacion {
         }
         return isFinDe;
     }
-
     private static boolean validarRegistroNumeroTimbradas(DtoHorario horario) throws ParseException {
         boolean allRegister = true;
         if(horario.getTime().size() <= 3){
@@ -152,7 +160,6 @@ public class ProcesarInformacion {
         }
         return allRegister;
     }
-
     private static boolean validarHorarioIngreso (DtoHorario horario){
         LocalTime horaIngresoGano = LocalTime.parse(HORA_INGRESO) ;
         boolean isLate = false;
