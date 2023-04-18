@@ -12,13 +12,15 @@ public class UtilDate {
     DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss aa");
     DateFormat outsfd = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
     public static DateFormat dateFormatHHMM = new SimpleDateFormat("HH:mm");
+    public static DateFormat dateFormatmmss = new SimpleDateFormat("mm:ss");
+    public static DateFormat dateFormatHHmmss = new SimpleDateFormat("HH:mm:ss");
     public static SimpleDateFormat sformatFile = new SimpleDateFormat("MM-dd-yyyy_HH_mm_ss");
     public static SimpleDateFormat sformatFechaDDMMYYY = new SimpleDateFormat("dd-MM-yyyy");
 
 
 
 
-    private Integer calcularTiempoTrancurrido3 (String horaInicio, String horaFin) throws ParseException {
+    public static Integer calcularTiempoTrancurrido3 (String horaInicio, String horaFin) throws ParseException {
         Date dateInicio = dateFormatHHMM.parse(horaInicio);
         Date dateFin = dateFormatHHMM.parse(horaFin);
         long milliseconds = dateFin.getTime() - dateInicio.getTime();

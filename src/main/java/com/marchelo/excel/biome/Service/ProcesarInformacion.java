@@ -114,6 +114,23 @@ public class ProcesarInformacion {
         }
         return result;
     }
+    public static List<UserBiometrico> userLateLaunch(List<UserBiometrico> infoUserBiome) throws ParseException{
+        List<UserBiometrico> result = new ArrayList<>();
+        for(UserBiometrico it : infoUserBiome){
+            List<DtoHorario> horarios = new ArrayList<>();
+            for (DtoHorario h : it.getDate()){
+                if(h.getTime().size() == 4){
+                    if(!validHorarioAlmuerzo(h)){
+                        horarios.add(h);
+                    }
+                }
+            }
+            if(horarios.size()>0){
+                result.add(new UserBiometrico(it.getPersonID(), it.getName(), horarios));
+            }
+        }
+        return result;
+    }
 
     private static boolean validHorarioAlmuerzo (DtoHorario horario) throws ParseException {
         boolean llegaHoraSucess = true;

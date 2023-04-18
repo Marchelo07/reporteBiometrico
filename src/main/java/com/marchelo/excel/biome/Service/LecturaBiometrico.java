@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.marchelo.excel.biome.Models.DtoHorario;
 import com.marchelo.excel.biome.Models.UserBiometrico;
 import com.marchelo.excel.biome.util.Error;
+import com.marchelo.excel.biome.util.UtilDate;
 import com.marchelo.excel.biome.util.UtilString;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -114,10 +115,11 @@ public class LecturaBiometrico {
         List<UserBiometrico> listRegisterFinDe = ProcesarInformacion.userRegisterFinDe(infoUsersBiome);
         List<UserBiometrico> listLauchAtime =  ProcesarInformacion.userLaunchATime(listRegisterAll);
         List<UserBiometrico> listNoTimbra4Veces = ProcesarInformacion.userNoTimbra4Veces(infoUsersBiome);
+        List<UserBiometrico> lateHoraAlmuerzo = ProcesarInformacion.userLateLaunch(infoUsersBiome);
 
         GeneracionReporte reporte = new GeneracionReporte();
         reporte.setInformationReport(listUserOnTime, listUserOnLate, listRegisterAll, listRegisterFinDe, listLauchAtime,
-                listNoTimbra4Veces, nameSheet);
+                listNoTimbra4Veces, lateHoraAlmuerzo,nameSheet);
     }
     private List<UserBiometrico> organizarArrayInformacion(List<UserBiometrico> list, UserBiometrico dto){
         List<UserBiometrico> listNewBiome = new ArrayList<>();

@@ -18,17 +18,19 @@ import java.util.List;
 
 public class GeneracionReporte {
     public void setInformationReport(List<UserBiometrico> listOntime, List<UserBiometrico> listUserOnLate,
-                                     List<UserBiometrico> listAllRegister, List<UserBiometrico> listRegisterFinDe,
-                                     List<UserBiometrico> listLaunchTime, List<UserBiometrico> listNoTimbra4Veces
+            List<UserBiometrico> listAllRegister, List<UserBiometrico> listRegisterFinDe,
+            List<UserBiometrico> listLaunchTime, List<UserBiometrico> listNoTimbra4Veces,
+            List<UserBiometrico> lateHoraAlmuerzo
             ,String nameSheet) throws IOException, ParseException {
 
         generarArchivoExcelResult(listOntime, listUserOnLate, listAllRegister, listRegisterFinDe, listLaunchTime,
-                listNoTimbra4Veces, nameSheet);
+                listNoTimbra4Veces, lateHoraAlmuerzo,nameSheet);
     }
 
     private void generarArchivoExcelResult(List<UserBiometrico> listOntime, List<UserBiometrico>listUserOnLate,
                                            List<UserBiometrico> listAllRegister, List<UserBiometrico> listRegisterFinDe,
-                                           List<UserBiometrico> listLaunchTime, List<UserBiometrico> listNoTimbra4Veces
+                                           List<UserBiometrico> listLaunchTime, List<UserBiometrico> listNoTimbra4Veces,
+                                           List<UserBiometrico> lateHoraAlmuerzo
             ,String nameSheet) throws IOException, ParseException {
 
         Workbook workbook = new XSSFWorkbook();
@@ -38,6 +40,8 @@ public class GeneracionReporte {
         generarSheetUserFinDe(workbook, sheet, listRegisterFinDe);
         sheet = workbook.createSheet("NO TIMBRA 4 VECES");
         generarSheetUserNoTimbra4Veces(workbook, sheet, listNoTimbra4Veces);
+        sheet = workbook.createSheet("LAUNCH LATE");
+        generarSheetLateHoraAlmuerzo(workbook, sheet, lateHoraAlmuerzo);
         sheet = workbook.createSheet("ONTIME");
         generarSheetUserOnTime(workbook, sheet, listOntime);
         sheet = workbook.createSheet("4 TIMBRADAS");
@@ -268,6 +272,9 @@ public class GeneracionReporte {
         headerCell = header.createCell(1);
         headerCell.setCellValue("NOMBRE");
         headerCell.setCellStyle(style);
+        headerCell = header.createCell(2);
+        headerCell.setCellValue("# DÍAS");
+        headerCell.setCellStyle(style);
 
         if(listRegisterFinDe.size() > 0){
             Integer rowNext = 1;
@@ -279,6 +286,8 @@ public class GeneracionReporte {
 
                 cell = row.createCell(1);
                 cell.setCellValue(user.getName());
+                cell = row.createCell(2);
+                cell.setCellValue(user.getDate().size());
                 rowNext = rowNext + 1;
             }
             //TABLE 2
@@ -433,6 +442,66 @@ public class GeneracionReporte {
             cell.setCellValue("No existen registros para mostrar");
         }
     }
+    private void generarSheetLateHoraAlmuerzo(Workbook workbook, Sheet sheet, List<UserBiometrico> lateHoraAlmuerzo) throws ParseException {
+        String[] headerOnLateLaunch ={"ID","NOMBRE","FECHA","BREAK OUT","BREAK IN", "TIEMPO"};
+
+        sheet = EstilosExcel.setWidthColumnGeneric(sheet);
+        Row header = sheet.createRow(0);
+        CellStyle style = EstilosExcel.crearStiloCabecera(workbook);
+
+        Cell headerCell = header.createCell(0);
+        headerCell.setCellValue("ID");
+        headerCell.setCellStyle(style);
+        headerCell = header.createCell(1);
+        headerCell.setCellValue("NOMBRE");
+        headerCell.setCellStyle(style);
+
+        if(lateHoraAlmuerzo.size()>0){
+            Integer rowNext = 1;
+            for(int i=0; i < lateHoraAlmuerzo.size(); i++){
+                UserBiometrico user = lateHoraAlmuerzo.get(i);
+                Row row = sheet.createRow(rowNext);
+                Cell cell = row.createCell(0);
+                cell.setCellValue(user.getPersonID());
+                cell = row.createCell(1);
+                cell.setCellValue(user.getName());
+                rowNext = rowNext + 1;
+            }
+            //TABLE 2
+            rowNext = rowNext + 1;
+            header = sheet.createRow(rowNext);
+            //HEADER
+            for(int i=0; i< headerOnLateLaunch.length; i++){
+                headerCell = header.createCell(i);
+                headerCell.setCellValue(headerOnLateLaunch[i]);
+                headerCell.setCellStyle(style);
+            }
+            //BODY
+            List<DtoDetailLaunchTime> lista = getInfoUserLaunchLate(lateHoraAlmuerzo);
+            rowNext = rowNext + 1;
+            for(int i=0; i < lista.size(); i++){
+                DtoDetailLaunchTime user = lista.get(i);
+                Row row = sheet.createRow(rowNext);
+                Cell cell = row.createCell(0);
+                cell.setCellValue(user.getId());
+                cell = row.createCell(1);
+                cell.setCellValue(user.getNombre());
+                cell = row.createCell(2);
+                cell.setCellValue(user.getFecha());
+                cell = row.createCell(3);
+                cell.setCellValue(user.getHoraOutLaunch());
+                cell = row.createCell(4);
+                cell.setCellValue(user.getHoraInLaunch());
+                cell = row.createCell(5);
+                cell.setCellValue(user.getTiempoLaunch());
+                rowNext = rowNext + 1;
+            }
+        }else{
+            Row row = sheet.createRow(1);
+            Cell cell = row.createCell(1);
+            cell.setCellValue("No existen registros para mostrar");
+        }
+    }
 
     private List<DtoDetailUserOnTime> getInfoDetailNoTimbra4Veces (List<UserBiometrico> lisNoTimbra4Veces) {
         List<DtoDetailUserOnTime> result = new ArrayList<>();
@@ -499,6 +568,21 @@ public class GeneracionReporte {
                 if(h.getTime().size() == 4){
                     result.add(new DtoDetailUserOnTime(it.getPersonID(), it.getName(),h.getFecha(), h.getTime().get(0),
                             h.getTime().get(1), h.getTime().get(2), h.getTime().get(3)));
+                }
+            }
+        }
+        return result;
+    }
+    private List<DtoDetailLaunchTime> getInfoUserLaunchLate(List<UserBiometrico> lateHoraAlmuerzo) throws ParseException {
+        List<DtoDetailLaunchTime> result = new ArrayList<>();
+        for(UserBiometrico it: lateHoraAlmuerzo){
+            List<DtoHorario> listHorarios = it.getDate();
+            for(DtoHorario h : listHorarios){
+                if(h.getTime().size() == 4){
+                    String strMinutes = UtilDate.dateFormatHHmmss.format(UtilDate.calcularTiempoTrancurridoTime(h.getTime().get(1),
+                            h.getTime().get(2)));
+                    result.add(new DtoDetailLaunchTime(it.getPersonID(), it.getName(),
+                            h.getFecha(), h.getTime().get(1),h.getTime().get(2), strMinutes));
                 }
             }
         }
